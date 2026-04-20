@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bootyloversdelight — Nerve Net for Home Infrastructure</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #080a07;
+    --bg2: #0d110c;
+    --bg3: #111611;
+    --bg-card: #0f1410;
+    --green: #39ff14;
+    --green-dim: #20a80a;
+    --green-ghost: rgba(57,255,20,0.07);
+    --green-border: rgba(57,255,20,0.18);
+    --green-glow: rgba(57,255,20,0.35);
+    --amber: #ffb300;
+    --amber-dim: rgba(255,179,0,0.15);
+    --red: #ff3b30;
+    --red-dim: rgba(255,59,48,0.12);
+    --cyan: #00e5ff;
+    --text: #c8d8c0;
+    --text-dim: #5a7050;
+    --text-muted: #3a4a35;
+    --rule: rgba(57,255,20,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* noise texture */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.4;
+  }
+
+  /* ─── LAYOUT ─────────────────────────────────────────────── */
+  .shell {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* ─── MASTHEAD ───────────────────────────────────────────── */
+  .masthead {
+    padding: 48px 0 0;
+    border-bottom: 1px solid var(--rule);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .masthead-bg-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--rule) 1px, transparent 1px),
+      linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent);
+    pointer-events: none;
+  }
+
+  .sys-label {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--green-dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sys-label::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--green-glow);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--green-glow); }
+    50% { opacity: 0.4; box-shadow: 0 0 3px var(--green-glow); }
+  }
+
+  .title-block {
+    margin-bottom: 24px;
+    position: relative;
+  }
+
+  h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    font-size: clamp(22px, 4vw, 36px);
+    color: var(--green);
+    text-shadow: 0 0 30px rgba(57,255,20,0.4), 0 0 60px rgba(57,255,20,0.15);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  .subtitle {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    color: var(--text-dim);
+    margin-top: 6px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* ─── NAV ────────────────────────────────────────────────── */
+  .nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin-top: 28px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .nav a {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 10px 16px 10px 0;
+    transition: color 0.15s;
+    white-space: nowrap;
+  }
+
+  .nav a:hover { color: var(--green); }
+  .nav a + a { border-left: none; }
+
+  /* ─── SECTIONS ───────────────────────────────────────────── */
+  section {
+    margin-top: 64px;
+    opacity: 0;
+    transform: translateY(16px);
+    animation: fadeup 0.5s ease forwards;
+  }
+
+  section:nth-child(1) { animation-delay: 0.05s; }
+  section:nth-child(2) { animation-delay: 0.12s; }
+  section:nth-child(3) { animation-delay: 0.19s; }
+  section:nth-child(4) { animation-delay: 0.26s; }
+  section:nth-child(5) { animation-delay: 0.33s; }
+  section:nth-child(6) { animation-delay: 0.40s; }
+  section:nth-child(7) { animation-delay: 0.47s; }
+
+  @keyframes fadeup {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .section-num {
+    font-size: 10px;
+    color: var(--green-dim);
+    letter-spacing: 0.1em;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+
+  h2 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--green);
+    letter-spacing: 0.02em;
+    line-height: 1.3;
+  }
+
+  /* ─── PROSE ──────────────────────────────────────────────── */
+  p {
+    color: var(--text);
+    margin-bottom: 14px;
+    font-size: 13px;
+    line-height: 1.75;
+  }
+
+  strong {
+    color: #ddeedd;
+    font-weight: 500;
+  }
+
+  /* ─── PROTOCOL STEPS ─────────────────────────────────────── */
+  .protocol {
+    counter-reset: step;
+    margin: 24px 0;
+  }
+
+  .protocol-step {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 0 16px;
+    margin-bottom: 4px;
+    position: relative;
+  }
+
+  .protocol-step::before {
+    counter-increment: step;
+    content: counter(step);
+    font-size: 10px;
+    color: var(--green-dim);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding-top: 14px;
+    text-align: right;
+  }
+
+  .step-body {
+    background: var(--bg-card);
+    border: 1px solid var(--green-border);
+    border-left: 2px solid var(--green-dim);
+    padding: 12px 16px;
+    margin-bottom: 6px;
+    position: relative;
+  }
+
+  .step-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--green);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .step-body p {
+    font-size: 12px;
+    margin-bottom: 0;
+    color: #9ab89a;
+  }
+
+  /* bullet items inside steps */
+  .step-bullets {
+    list-style: none;
+    margin-top: 8px;
+  }
+
+  .step-bullets li {
+    font-size: 12px;
+    color: #8aaa8a;
+    padding: 2px 0 2px 16px;
+    position: relative;
+    line-height: 1.6;
+  }
+
+  .step-bullets li::before {
+    content: '·';
+    position: absolute;
+    left: 4px;
+    color: var(--green-dim);
+  }
+
+  /* ─── SHADOW DATA ────────────────────────────────────────── */
+  .shadow-data {
+    margin: 28px 0;
+  }
+
+  .shadow-header {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .shadow-header::before {
+    content: '⚠';
+    font-size: 11px;
+  }
+
+  .shadow-item {
+    border: 1px solid rgba(255,179,0,0.15);
+    border-left: 2px solid rgba(255,179,0,0.5);
+    background: rgba(255,179,0,0.04);
+    padding: 12px 16px;
+    margin-bottom: 6px;
+  }
+
+  .shadow-fault {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--amber);
+    letter-spacing: 0.05em;
+    margin-bottom: 5px;
+  }
+
+  .shadow-mit {
+    font-size: 11px;
+    color: #8aaa8a;
+    line-height: 1.6;
+  }
+
+  .shadow-mit strong {
+    color: #aacaaa;
+    font-weight: 500;
+  }
+
+  /* ─── TABLES ─────────────────────────────────────────────── */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 24px 0;
+    border: 1px solid var(--rule);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  thead th {
+    background: var(--bg3);
+    color: var(--green-dim);
+    font-weight: 600;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--green-border);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--rule);
+    color: #9ab89a;
+    vertical-align: top;
+    line-height: 1.6;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  tbody tr:hover td {
+    background: var(--green-ghost);
+    color: var(--text);
+  }
+
+  .td-label {
+    color: #cce0cc;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .td-green { color: var(--green-dim); }
+  .td-red { color: #cc6655; }
+  .td-amber { color: var(--amber); opacity: 0.85; }
+
+  /* pro/con table */
+  .pro-con-table thead th:nth-child(1) { color: var(--green-dim); }
+  .pro-con-table thead th:nth-child(2) { color: #cc6655; }
+
+  /* ─── CRDT DESIGN ────────────────────────────────────────── */
+  .crdt-model {
+    background: var(--bg-card);
+    border: 1px solid var(--green-border);
+    padding: 16px 20px;
+    margin: 20px 0;
+  }
+
+  .crdt-row {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(57,255,20,0.06);
+  }
+
+  .crdt-row:last-child { border-bottom: none; }
+
+  .crdt-key {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--green-dim);
+    flex: 0 0 110px;
+  }
+
+  .crdt-val {
+    font-size: 12px;
+    color: #9ab89a;
+    line-height: 1.6;
+  }
+
+  /* ─── RESILIENCE STEPS ───────────────────────────────────── */
+  .resilience-list {
+    list-style: none;
+    counter-reset: res;
+    margin: 20px 0;
+  }
+
+  .resilience-list li {
+    counter-increment: res;
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule);
+    align-items: start;
+  }
+
+  .resilience-list li:last-child { border-bottom: none; }
+
+  .resilience-list li::before {
+    content: counter(res);
+    font-size: 10px;
+    color: var(--green-dim);
+    font-weight: 700;
+    padding-top: 1px;
+  }
+
+  .res-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--green);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .res-body {
+    font-size: 12px;
+    color: #8aaa8a;
+    line-height: 1.65;
+  }
+
+  /* ─── ECON OPTIONS ───────────────────────────────────────── */
+  .econ-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    margin: 24px 0;
+  }
+
+  .econ-card {
+    border: 1px solid var(--green-border);
+    background: var(--bg-card);
+    padding: 16px;
+    position: relative;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .econ-card.recommended {
+    border-color: var(--green-dim);
+    background: rgba(57,255,20,0.04);
+  }
+
+  .econ-card.recommended::after {
+    content: 'REC';
+    position: absolute;
+    top: 10px; right: 10px;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    font-weight: 700;
+    color: var(--green);
+    background: rgba(57,255,20,0.12);
+    padding: 2px 6px;
+    border: 1px solid var(--green-border);
+  }
+
+  .econ-option-label {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--green-dim);
+    margin-bottom: 6px;
+  }
+
+  .econ-option-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ddeedd;
+    margin-bottom: 10px;
+  }
+
+  .econ-option-body {
+    font-size: 11px;
+    color: #8aaa8a;
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+
+  .econ-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .tag {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    padding: 2px 7px;
+    border: 1px solid;
+  }
+
+  .tag-pro { border-color: rgba(57,255,20,0.25); color: var(--green-dim); }
+  .tag-con { border-color: rgba(255,59,48,0.2); color: #cc6655; }
+
+  /* ─── NUMBERS BLOCK ──────────────────────────────────────── */
+  .numbers-block {
+    background: var(--bg-card);
+    border: 1px solid var(--green-border);
+    padding: 20px;
+    margin: 20px 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0;
+  }
+
+  .num-item {
+    padding: 12px 16px;
+    border-right: 1px solid var(--rule);
+  }
+
+  .num-item:last-child { border-right: none; }
+
+  .num-label {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .num-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .num-sub {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .num-value.red { color: var(--red); }
+  .num-value.amber { color: var(--amber); }
+
+  /* ─── TRUST MODEL ────────────────────────────────────────── */
+  .trust-steps {
+    margin: 20px 0;
+  }
+
+  .trust-step {
+    display: grid;
+    grid-template-columns: 2px 1fr;
+    gap: 0 20px;
+    padding-left: 0;
+    position: relative;
+  }
+
+  .trust-step-line {
+    background: linear-gradient(to bottom, var(--green-dim), transparent);
+    margin-left: 15px;
+    width: 1px;
+  }
+
+  .trust-step-body {
+    padding: 0 0 20px 20px;
+  }
+
+  .trust-node {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .trust-node::before {
+    content: '';
+    flex-shrink: 0;
+    width: 8px; height: 8px;
+    border: 1px solid var(--green);
+    background: var(--bg);
+    transform: rotate(45deg);
+    box-shadow: 0 0 6px rgba(57,255,20,0.3);
+  }
+
+  .trust-node-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--green);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .trust-node-body {
+    margin-left: 18px;
+    margin-top: -12px;
+    font-size: 12px;
+    color: #8aaa8a;
+    padding-bottom: 20px;
+    border-left: 1px solid var(--rule);
+    padding-left: 20px;
+    margin-left: 3px;
+    line-height: 1.65;
+  }
+
+  /* ─── VULN TABLE ─────────────────────────────────────────── */
+  .vuln-component {
+    font-weight: 600;
+    color: #ddeedd;
+    white-space: nowrap;
+  }
+
+  .vuln-cve {
+    font-size: 10px;
+    color: var(--red);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  /* ─── 3AM BLOCK ──────────────────────────────────────────── */
+  .three-am {
+    margin-top: 64px;
+    border: 1px solid var(--green-border);
+    background: linear-gradient(135deg, rgba(57,255,20,0.04), transparent 60%);
+    padding: 32px 36px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .three-am::before {
+    content: '03:00';
+    position: absolute;
+    top: 20px; right: 24px;
+    font-size: 48px;
+    font-weight: 700;
+    color: rgba(57,255,20,0.04);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    pointer-events: none;
+  }
+
+  .three-am-label {
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--green-dim);
+    margin-bottom: 16px;
+  }
+
+  .three-am p {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+    color: #b8d8b8;
+    line-height: 1.85;
+    margin-bottom: 0;
+    max-width: 680px;
+  }
+
+  /* ─── FOOTER ─────────────────────────────────────────────── */
+  footer {
+    margin-top: 80px;
+    padding: 24px 0;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .footer-left {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+  }
+
+  .footer-right {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* ─── INLINE CODE ────────────────────────────────────────── */
+  code {
+    background: rgba(57,255,20,0.07);
+    border: 1px solid rgba(57,255,20,0.15);
+    color: var(--green-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 1px 5px;
+  }
+
+  /* ─── DIVIDER ────────────────────────────────────────────── */
+  hr {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 32px 0;
+  }
+
+  .why-block {
+    margin: 20px 0;
+  }
+
+  .why-item {
+    display: grid;
+    grid-template-columns: 14px 1fr;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 12px;
+    color: #9ab89a;
+    line-height: 1.6;
+    align-items: start;
+  }
+
+  .why-item:last-child { border-bottom: none; }
+
+  .why-dot {
+    color: var(--green-dim);
+    padding-top: 1px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ─── MASTHEAD ──────────────────────────────────────────── -->
+  <header class="masthead">
+    <div class="masthead-bg-grid"></div>
+    <div class="sys-label">System Specification · Rev 0.1 · Mesh Infrastructure</div>
+    <div class="title-block">
+      <h1>bootyloversdelight</h1>
+      <div class="subtitle">The Nerve Net for Home Infrastructure</div>
+    </div>
+    <nav class="nav">
+      <a href="#s1">01 · Node Join</a>
+      <a href="#s2">02 · CRDT Sync</a>
+      <a href="#s3">03 · Dashboard</a>
+      <a href="#s4">04 · mTLS</a>
+      <a href="#s5">05 · Money Monster</a>
+      <a href="#s6">06 · Security</a>
+      <a href="#s7">07 · Vulns</a>
+    </nav>
+  </header>
+
+  <!-- ─── SECTION 1: NODE JOIN ──────────────────────────────── -->
+  <section id="s1">
+    <div class="section-header">
+      <span class="section-num">01 ·</span>
+      <h2>Node Join: QR Code Bootstrap Without a Central Token Issuer</h2>
+    </div>
+
+    <p>A new node joining the mesh requires no central authority—only a single existing node's cryptographic identity and network coordinates.</p>
+
+    <div class="protocol">
+      <div class="protocol-step">
+        <div></div>
+        <div class="step-body">
+          <div class="step-title">Bootstrap Node Generation</div>
+          <p>The first node in the network (or any existing node acting as an introducer) generates a QR code containing:</p>
+          <ul class="step-bullets">
+            <li>Its SPKI SHA-256 pin (the public key fingerprint of its self-signed TLS certificate)</li>
+            <li>Its IP address and gRPC port</li>
+            <li>A one-time bootstrap nonce (valid for 60 seconds)</li>
+            <li>A network identifier hash (derived from the initial node's public key, ensuring the new node joins the correct mesh)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="protocol-step">
+        <div></div>
+        <div class="step-body">
+          <div class="step-title">New Node Bootstrapping</div>
+          <p>The new node, on first boot, prompts the user to scan this QR code. The node extracts the bootstrap peer's SPKI pin and address, then:</p>
+          <ul class="step-bullets">
+            <li>Establishes a pinned TLS connection to the bootstrap peer—the certificate must match the SPKI pin exactly, eliminating the TOFU first-contact vulnerability</li>
+            <li>Sends a <code>JoinRequest</code> containing its own self-signed certificate and SPKI pin</li>
+            <li>The bootstrap peer adds the new node to its local peer list and gossips the addition to the mesh</li>
+            <li>The new node receives the full CRDT state (ad-block rules, node list) and begins participating in gossip</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="protocol-step">
+        <div></div>
+        <div class="step-body">
+          <div class="step-title">Zero Trust Introducers</div>
+          <p>Any node can serve as a bootstrap introducer. There is no privileged "manager" role. The trust anchor is the pinned SPKI hash of the bootstrap peer, not a central CA.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="shadow-data">
+      <div class="shadow-header">Shadow Data — What Will Go Wrong</div>
+
+      <div class="shadow-item">
+        <div class="shadow-fault">QR Code Scanning Failures</div>
+        <div class="shadow-mit">Users will point their phone camera at the QR code and get nothing because the terminal font is too small, the screen brightness is too low, or the contrast is insufficient. <strong>Fallback:</strong> Manual entry of IP:PORT and SPKI fingerprint.</div>
+      </div>
+
+      <div class="shadow-item">
+        <div class="shadow-fault">Bootstrap Peer Unavailability</div>
+        <div class="shadow-mit">If the bootstrap peer is offline during the join window, the new node hangs indefinitely. <strong>Mitigation:</strong> Display a clear "bootstrap peer unreachable—verify the node is online" message and allow scanning a different existing node's QR code.</div>
+      </div>
+
+      <div class="shadow-item">
+        <div class="shadow-fault">Network Partition During Join</div>
+        <div class="shadow-mit">If the new node is on a different VLAN or behind a firewall that blocks the gRPC port, it cannot reach the bootstrap peer even though mDNS works. <strong>Fallback:</strong> Manual IP entry with port forwarding guidance.</div>
+      </div>
+
+      <div class="shadow-item">
+        <div class="shadow-fault">Clock Skew</div>
+        <div class="shadow-mit">The 60-second nonce relies on reasonably synchronized clocks. A new node with a wildly incorrect system clock (e.g., fresh Raspberry Pi) will reject the bootstrap offer. <strong>Mitigation:</strong> Allow a wider tolerance (±5 minutes) and display a warning.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 2: CRDT SYNC ──────────────────────────────── -->
+  <section id="s2">
+    <div class="section-header">
+      <span class="section-num">02 ·</span>
+      <h2>Ad-Block Rules Synchronization: CRDT Without a Central Database</h2>
+    </div>
+
+    <p>Rules are stored as a Conflict-Free Replicated Data Type (CRDT) set that syncs across all nodes via the gossip mesh. There is no primary database, no leader, no quorum.</p>
+
+    <div class="crdt-model">
+      <div class="crdt-row">
+        <span class="crdt-key">Data Model</span>
+        <span class="crdt-val">Each rule is a tuple <code>(domain, action, timestamp, node_id, operation_id)</code>. Action is an enum: <code>BLOCK</code>, <code>PIXEL</code>, or <code>CUSTOM_HTML</code>.</span>
+      </div>
+      <div class="crdt-row">
+        <span class="crdt-key">CRDT Type</span>
+        <span class="crdt-val">Observed-Remove Set (OR-Set) where each element has a unique identifier and a vector clock. Deletions are represented as tombstones with the same identifier.</span>
+      </div>
+      <div class="crdt-row">
+        <span class="crdt-key">Sync Protocol</span>
+        <span class="crdt-val">When a node adds or removes a rule, it broadcasts the operation via gossip. Peers apply the operation deterministically: later timestamp wins; if timestamps are equal, higher <code>node_id</code> wins.</span>
+      </div>
+      <div class="crdt-row">
+        <span class="crdt-key">Implementation</span>
+        <span class="crdt-val">Use the <code>automerge</code> crate—a production-grade CRDT library with Rust + WebAssembly bindings. <code>automerge-repo</code> handles the network synchronization layer.</span>
+      </div>
+    </div>
+
+    <div class="why-block">
+      <div class="why-item"><span class="why-dot">·</span><span>Every node maintains the full rule set locally in SQLite (for fast querying by the DNS server) while the CRDT document serves as the source of truth for sync.</span></div>
+      <div class="why-item"><span class="why-dot">·</span><span>A node that was offline for a week catches up by requesting operations since its last known vector clock from any gossip peer.</span></div>
+      <div class="why-item"><span class="why-dot">·</span><span>Conflicting rules (e.g., two users adding different actions for the same domain) are resolved automatically; the "winning" rule is active, but the history is preserved.</span></div>
+    </div>
+
+    <div class="shadow-data">
+      <div class="shadow-header">Shadow Data — What Will Go Wrong</div>
+
+      <div class="shadow-item">
+        <div class="shadow-fault">CRDT Document Bloat</div>
+        <div class="shadow-mit">With thousands of rules and frequent changes, the CRDT document grows linearly. Tombstones are never deleted (by design, for causality). After a year of operation, sync may become slow. <strong>Mitigation:</strong> Implement garbage collection that prunes tombstones older than 30 days, assuming all nodes have seen them.</div>
+      </div>
+
+      <div class="shadow-item">
+        <div class="shadow-fault">Divergent States</div>
+        <div class="shadow-mit">If a node is partitioned for months and misses garbage collection, it may have a different view of which tombstones are safe to delete. <strong>Mitigation:</strong> Nodes gossip their vector clocks and refuse to GC until all active peers have acknowledged the tombstone.</div>
+      </div>
+
+      <div class="shadow-item">
+        <div class="shadow-fault">Large Initial Sync</div>
+        <div class="shadow-mit">A new node joining a long-running mesh must download the entire CRDT history. For 10,000 rules this is manageable (a few MB). For 1,000,000 rules it's a problem. <strong>Mitigation:</strong> Snapshot mechanism—a node exports its current state as a compact binary and serves it over HTTP for new nodes to bootstrap from.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 3: DASHBOARD ──────────────────────────────── -->
+  <section id="s3">
+    <div class="section-header">
+      <span class="section-num">03 ·</span>
+      <h2>Dashboard Resilience: Client-Side Failover When a Node Goes Down</h2>
+    </div>
+
+    <p>The dashboard is a static HTML/JavaScript bundle served by every node on its own embedded HTTP server. When the user visits <code>http://&lt;any-node-ip&gt;:8080</code>, they get the same dashboard, and the dashboard does not rely on that node staying up.</p>
+
+    <ol class="resilience-list">
+      <li>
+        <div>
+          <div class="res-title">Peer List Discovery</div>
+          <div class="res-body">On load, the dashboard queries the local node's <code>/peers</code> endpoint, which returns the current list of known mesh nodes (IPs, ports, SPKI pins) from the node's local CRDT state.</div>
+        </div>
+      </li>
+      <li>
+        <div>
+          <div class="res-title">Parallel Hedged Requests</div>
+          <div class="res-body">For every gRPC call (e.g., <code>GetClusterStatus</code>), the dashboard selects three random nodes from the peer list and sends the request to all three simultaneously. The first successful response is used; the others are canceled. This mitigates node failures transparently.</div>
+        </div>
+      </li>
+      <li>
+        <div>
+          <div class="res-title">Multi-Node WebSocket Fallback</div>
+          <div class="res-body">For streaming data (e.g., live DNS query logs), the dashboard opens WebSocket connections to multiple nodes. Each event includes a Lamport timestamp and <code>node_id</code>. The dashboard deduplicates events by keeping a sliding window of seen <code>(node_id, timestamp)</code> tuples. If one WebSocket dies, the others continue feeding data.</div>
+        </div>
+      </li>
+      <li>
+        <div>
+          <div class="res-title">Local Cache of Peer List</div>
+          <div class="res-body">The dashboard stores the last known peer list in <code>localStorage</code>. If the initial node is unreachable, it attempts to connect to cached peers directly.</div>
+        </div>
+      </li>
+    </ol>
+
+    <div class="shadow-data">
+      <div class="shadow-header">Shadow Data — What Will Go Wrong</div>
+
+      <div class="shadow-item">
+        <div class="shadow-fault">CORS and Mixed Content</div>
+        <div class="shadow-mit">The dashboard loaded from <code>http://node1:8080</code> attempts to make gRPC-Web requests to <code>https://node2:8443</code>. Browsers block this due to CORS unless the node's HTTP server includes <code>Access-Control-Allow-Origin</code> headers. <strong>Mitigation:</strong> Every node's embedded server includes <code>Access-Control-Allow-Origin: *</code> (acceptable for LAN-only dashboards) and serves the dashboard over HTTPS only, with a self-signed cert.</div>
+      </div>
+
+      <div class="shadow-item">
+        <div class="shadow-fault">Browser Certificate Errors</div>
+        <div class="shadow-mit">Each node uses a self-signed certificate. The dashboard, when making requests to multiple nodes, will encounter certificate warnings for each new node's IP. <strong>Mitigation:</strong> The user must manually accept each node's certificate on first connection (browser-native TOFU), or the dashboard is served over plain HTTP for LAN-only use with a clear warning.</div>
+      </div>
+
+      <div class="shadow-item">
+        <div class="shadow-fault">WebSocket Message Flood</div>
+        <div class="shadow-mit">With 10 nodes and 3 WebSocket connections, the dashboard receives duplicate events for every DNS query. <strong>Mitigation:</strong> Subscribe to only one WebSocket at a time, with a failover mechanism that reconnects to the next node on disconnect.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 4: mTLS ───────────────────────────────────── -->
+  <section id="s4">
+    <div class="section-header">
+      <span class="section-num">04 ·</span>
+      <h2>mTLS Without a Central CA: TOFU + SPKI Pinning</h2>
+    </div>
+
+    <p>The system uses mutual TLS (mTLS) between nodes without any central certificate authority. Trust is established via Trust On First Use (TOFU) hardened with SPKI pinning.</p>
+
+    <div class="trust-node">
+      <span></span>
+      <span class="trust-node-title">1 · Self-Signed Certificates</span>
+    </div>
+    <div class="trust-node-body">Every node generates a self-signed X.509 certificate on first boot. The certificate includes a unique <code>node_id</code> in the Subject Alternative Name.</div>
+
+    <div class="trust-node">
+      <span></span>
+      <span class="trust-node-title">2 · SPKI Pin Calculation</span>
+    </div>
+    <div class="trust-node-body">Each node computes the SHA-256 hash of its certificate's Subject Public Key Info (SPKI) and logs it at startup. This pin is the node's cryptographic identity.</div>
+
+    <div class="trust-node">
+      <span></span>
+      <span class="trust-node-title">3 · Pinned First Contact</span>
+    </div>
+    <div class="trust-node-body">When Node A connects to Node B for the first time (via QR code bootstrap), Node A has been provided with Node B's SPKI pin from the QR code. The TLS handshake verifies that the presented certificate's SPKI hash matches the expected pin exactly. This eliminates the TOFU first-contact MITM vulnerability.</div>
+
+    <div class="trust-node">
+      <span></span>
+      <span class="trust-node-title">4 · Subsequent Connections</span>
+    </div>
+    <div class="trust-node-body">Once a connection succeeds, Node A stores Node B's <code>(node_id, SPKI_pin, certificate)</code> in a local trust store. Future connections verify the pin matches the stored value. If the pin changes (e.g., due to certificate regeneration), the connection is rejected and the user is alerted.</div>
+
+    <div class="trust-node">
+      <span></span>
+      <span class="trust-node-title">5 · Mesh Propagation</span>
+    </div>
+    <div class="trust-node-body">When a new node joins via bootstrap, the bootstrap peer gossips the new node's <code>node_id</code> and SPKI pin to the rest of the mesh. Other nodes can now connect to the new node with pinned trust, without ever having performed a TOFU handshake directly.</div>
+
+    <p style="margin-top:24px; font-size:12px; color:var(--text-dim);">The trust anchor is the bootstrap QR code, exchanged out-of-band by physically scanning a screen. Analogous to SSH host key verification. SPKI pinning is immune to certificate regeneration—the pin depends only on the public key, which can be reused across certificate renewals.</p>
+
+    <div class="shadow-data">
+      <div class="shadow-header">Shadow Data — What Will Go Wrong</div>
+
+      <div class="shadow-item">
+        <div class="shadow-fault">User Ignorance</div>
+        <div class="shadow-mit">Users will scan the QR code without understanding it contains a cryptographic trust anchor. 99% will not verify the SPKI fingerprint out-of-band, same as SSH. <strong>Mitigation:</strong> The QR code screen displays a prominent warning: "Only scan this if you are physically present with the node. Verify the fingerprint matches the label on the device."</div>
+      </div>
+
+      <div class="shadow-item">
+        <div class="shadow-fault">Certificate Regeneration</div>
+        <div class="shadow-mit">If a node's disk fails and it regenerates a new certificate with a new public key, its SPKI pin changes and all other nodes will reject connections. <strong>Mitigation:</strong> Provide a "reset node identity" workflow that requires manual intervention (e.g., physically pressing a button on the device) and broadcasts a revocation message.</div>
+      </div>
+
+      <div class="shadow-item">
+        <div class="shadow-fault">Key Compromise</div>
+        <div class="shadow-mit">If a node's private key is stolen, the attacker can impersonate that node. There is no central revocation authority. <strong>Mitigation:</strong> Nodes can broadcast a <code>NodeRevoked</code> message signed by the compromised node's private key (if available) or rely on manual removal from the mesh via the dashboard.</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="table-wrap">
+      <table class="pro-con-table">
+        <thead>
+          <tr>
+            <th>Pro (TOFU)</th>
+            <th>Con (TOFU)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-green">Zero infrastructure overhead—no CA to deploy, secure, or maintain.</td>
+            <td class="td-red">First-contact vulnerability if the bootstrap pin is not verified out-of-band.</td>
+          </tr>
+          <tr>
+            <td class="td-green">No single point of trust compromise—compromising one node's key does not compromise the entire mesh.</td>
+            <td class="td-red">No centralized revocation—revoking a compromised node requires manual propagation or a gossip-based revocation list.</td>
+          </tr>
+          <tr>
+            <td class="td-green">Works offline—no dependency on external OCSP/CRL servers.</td>
+            <td class="td-red">User friction—certificate changes trigger warnings that users must manually accept.</td>
+          </tr>
+          <tr>
+            <td class="td-green">Scales horizontally—trust is peer-to-peer, not bottlenecked through a CA.</td>
+            <td class="td-red">No cross-mesh trust—nodes from different meshes cannot automatically trust each other without a shared root of trust.</td>
+          </tr>
+          <tr>
+            <td class="td-green">Resistant to CA compromise—unlike the Web PKI, where a single rogue CA can issue certs for any domain.</td>
+            <td class="td-red">Difficult auditability—no central log of issued certificates; each node maintains its own trust store.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 5: ECONOMICS ──────────────────────────────── -->
+  <section id="s5">
+    <div class="section-header">
+      <span class="section-num">05 ·</span>
+      <h2>The Money Monster: What the Math Actually Says</h2>
+    </div>
+
+    <p>The default framing—"DePIN mining on residential hardware is not profitable"—is true and incomplete at the same time. It describes the median outcome for the median participant who joins after public attention, runs one node at home, and sells tokens immediately. That is not the only configuration. What follows is the version nobody writes down, built from the reward algorithm source code, tokenomic papers, and network economics rather than project marketing.</p>
+
+    <!-- THE BASELINE MATH: STILL NEGATIVE BY DEFAULT -->
+    <div class="shadow-header" style="color:var(--green-dim); margin-bottom:14px; display:flex; align-items:center; gap:8px; font-size:10px; letter-spacing:0.2em; text-transform:uppercase;">
+      <span style="color:var(--green-dim);">◆</span> The Baseline: Default Configuration Is Still Negative
+    </div>
+
+    <div class="numbers-block">
+      <div class="num-item">
+        <div class="num-label">Electricity</div>
+        <div class="num-value">$0.16</div>
+        <div class="num-sub">per kWh US avg</div>
+      </div>
+      <div class="num-item">
+        <div class="num-label">Node Draw</div>
+        <div class="num-value">5–10W</div>
+        <div class="num-sub">Raspberry Pi 4</div>
+      </div>
+      <div class="num-item">
+        <div class="num-label">Annual Cost</div>
+        <div class="num-value amber">$7–14</div>
+        <div class="num-sub">24/7 operation</div>
+      </div>
+      <div class="num-item">
+        <div class="num-label">Annual Earn</div>
+        <div class="num-value amber">≤$6</div>
+        <div class="num-sub">DePIN median</div>
+      </div>
+      <div class="num-item">
+        <div class="num-label">Net (default)</div>
+        <div class="num-value red">−$8</div>
+        <div class="num-sub">per year, per node</div>
+      </div>
+    </div>
+
+    <p style="font-size:12px; color:var(--text-dim); margin-bottom:28px;">That is the honest baseline. Everything below describes how to change the variables—not through speculation, but through structural advantages that exist in the protocol math and are almost never documented together in one place.</p>
+
+    <!-- VECTOR 1: EMISSION CURVE -->
+    <div class="shadow-header" style="color:var(--cyan); margin:28px 0 14px; display:flex; align-items:center; gap:8px; font-size:10px; letter-spacing:0.2em; text-transform:uppercase;">
+      <span>▸</span> Vector 1: Emission Curve Front-Running
+    </div>
+
+    <div class="crdt-model" style="border-color:rgba(0,229,255,0.15);">
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Identity</span>
+        <span class="crdt-val">Reward per node = <code>emission_rate(t) ÷ node_count(t)</code>. Both variables change over time. Emission decays on a schedule written in the whitepaper. Node count grows as the project receives press coverage.</span>
+      </div>
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Asymmetry</span>
+        <span class="crdt-val">Under exponential decay emission, block rewards are mathematically highest when participation is lowest. The reward-per-node curve peaks before public attention, not after. This is not opinion—it is the shape of the function.</span>
+      </div>
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Crossover</span>
+        <span class="crdt-val">There is a date T* where the rate of node count growth exceeds the rate of emission decay. Before T*, each new node earns more than the last. After T*, each new node earns less. The profitable window is before T*, not after the first Medium article.</span>
+      </div>
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Action</span>
+        <span class="crdt-val">Read the whitepaper emission schedule. Find the halving dates. Query the live explorer API for current node count. Build the crossover model. Enter before T*. The <code>rainbowd</code> scheduler in this system already tracks emissions and node counts per protocol—this is the missing query it needs to answer.</span>
+      </div>
+    </div>
+
+    <p style="font-size:12px; color:var(--text-dim); margin-bottom:28px;">60% of active DePIN tokens have scheduled halving events or emission reductions within 18 months as of Q1 2025. The schedule is public. The crossover date is calculable. Most people never calculate it.</p>
+
+    <!-- VECTOR 2: HEX DENSITY ARBITRAGE -->
+    <div class="shadow-header" style="color:var(--cyan); margin:28px 0 14px; display:flex; align-items:center; gap:8px; font-size:10px; letter-spacing:0.2em; text-transform:uppercase;">
+      <span>▸</span> Vector 2: Geographic Density Arbitrage
+    </div>
+
+    <div class="crdt-model" style="border-color:rgba(0,229,255,0.15);">
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Algorithm</span>
+        <span class="crdt-val">Helium's HIP-17 density scaling reduces rewards for nodes in dense hexagons. A documented example: hex with 61 hotspots, reward scale reduced from <code>1.000 → 0.066</code>. That is a 15× penalty for being in a popular location.</span>
+      </div>
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Inverse</span>
+        <span class="crdt-val">A node in a sparse hex earns full scale (1.000). Same hardware. Same electricity cost. 15× earnings difference from placement alone. A rural node 30 miles from the nearest hotspot earns more than a city node in a neighborhood with six others.</span>
+      </div>
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Ring Pattern</span>
+        <span class="crdt-val">The adjacency bonus rewards nodes placed in neighboring hexagons (up to 6 neighbors). A 6-node ring placed one-per-hex in a coverage gap captures: full reward scale at every node + adjacency multiplier at each. A 6-node ring in sparse territory can mathematically outperform 60 nodes packed into a saturated city hex.</span>
+      </div>
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Action</span>
+        <span class="crdt-val">Before deploying a node, query the coverage map API. Find hexes with reward scale ≥ 0.8 and zero adjacent hotspots. Place the first node there. Plan a ring of 6. This is what the protocol is explicitly designed to incentivize—the information asymmetry is that most people deploy at home by default.</span>
+      </div>
+    </div>
+
+    <div class="numbers-block" style="margin-top:16px;">
+      <div class="num-item">
+        <div class="num-label">Dense hex scale</div>
+        <div class="num-value red">0.066</div>
+        <div class="num-sub">documented example</div>
+      </div>
+      <div class="num-item">
+        <div class="num-label">Sparse hex scale</div>
+        <div class="num-value" style="color:var(--green);">1.000</div>
+        <div class="num-sub">full reward</div>
+      </div>
+      <div class="num-item">
+        <div class="num-label">Earnings multiple</div>
+        <div class="num-value" style="color:var(--green);">15×</div>
+        <div class="num-sub">same hardware</div>
+      </div>
+      <div class="num-item">
+        <div class="num-label">Ring of 6 vs city pack</div>
+        <div class="num-value" style="color:var(--green);">10× +</div>
+        <div class="num-sub">combined effect</div>
+      </div>
+    </div>
+
+    <!-- VECTOR 3: PROTOCOL TYPE FILTER -->
+    <div class="shadow-header" style="color:var(--cyan); margin:32px 0 14px; display:flex; align-items:center; gap:8px; font-size:10px; letter-spacing:0.2em; text-transform:uppercase;">
+      <span>▸</span> Vector 3: Type A vs Type B Protocol Filter
+    </div>
+
+    <p style="font-size:12px; color:#9ab89a; margin-bottom:14px;">Two structurally different things are called "DePIN." Mixing them up is the most expensive mistake a node operator makes.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Revenue Source</th>
+            <th>What Happens When Emissions Drop</th>
+            <th>Examples</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-label">Type A · Token-Circular</td>
+            <td style="color:#cc6655; font-size:12px;">Miners earn tokens. Only other miners buy those tokens. Revenue is self-referential.</td>
+            <td style="color:#cc6655; font-size:12px;">Collapse. No external demand exists to replace emission rewards. Farm-and-dump accelerates.</td>
+            <td style="color:#8a9a8a; font-size:11px;">Most small DePIN launches. If you can't find who pays the network besides miners, it's Type A.</td>
+          </tr>
+          <tr>
+            <td class="td-label">Type B · Usage-Backed</td>
+            <td style="color:var(--green-dim); font-size:12px;">Real external buyers (enterprises, AI firms, IoT platforms) pay fiat for services. Tokens are burned to access capacity.</td>
+            <td style="color:var(--green-dim); font-size:12px;">Node operators still earn from usage fees. Token scarcity increases as burns continue. Two revenue streams compound.</td>
+            <td style="color:#8a9a8a; font-size:11px;">Aethir ($127.8M enterprise GPU revenue, 2025). Filecoin storage fees from external users. Render GPU jobs from production studios.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="crdt-model" style="border-color:rgba(0,229,255,0.15); margin-top:16px;">
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Filter</span>
+        <span class="crdt-val">Before joining any network: find the burn rate. Daily tokens burned by actual service usage, not by miners paying themselves. If burn rate ≈ 0, it is Type A. If burn rate is growing toward emission rate, it is Type B trending toward deflation.</span>
+      </div>
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Entry Point</span>
+        <span class="crdt-val">Enterprise contracts are signed months before they appear in explorer dashboards. The signal is partnership announcements with named enterprises, not token price charts. Enter Type B networks when burn rate is 10–30% of emissions and growing—before the ratio becomes visible to the mainstream.</span>
+      </div>
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The rainbowd Connection</span>
+        <span class="crdt-val">The Thompson Sampling scheduler in this system selects protocols by profitability. The missing input is burn-rate-to-emission ratio per protocol, fetched live. A protocol with burn/emission ratio trending toward 1.0 should receive increasing alpha in the sampler regardless of current token price.</span>
+      </div>
+    </div>
+
+    <!-- VECTOR 4: HARDWARE DEPRECIATION -->
+    <div class="shadow-header" style="color:var(--cyan); margin:32px 0 14px; display:flex; align-items:center; gap:8px; font-size:10px; letter-spacing:0.2em; text-transform:uppercase;">
+      <span>▸</span> Vector 4: Hardware Depreciation Arithmetic
+    </div>
+
+    <p style="font-size:12px; color:#9ab89a; margin-bottom:14px;">This is not tax advice. It is arithmetic that changes whether the baseline math is negative or positive, and almost nobody applies it to home infrastructure.</p>
+
+    <div class="numbers-block">
+      <div class="num-item">
+        <div class="num-label">Hardware cost</div>
+        <div class="num-value">$200</div>
+        <div class="num-sub">Raspberry Pi 5 kit</div>
+      </div>
+      <div class="num-item">
+        <div class="num-label">Naive breakeven</div>
+        <div class="num-value red">40 mo</div>
+        <div class="num-sub">at $5/mo earnings</div>
+      </div>
+      <div class="num-item">
+        <div class="num-label">After Sec. 179</div>
+        <div class="num-value amber">$124–154</div>
+        <div class="num-sub">real cost at 23–38% rate</div>
+      </div>
+      <div class="num-item">
+        <div class="num-label">Adjusted breakeven</div>
+        <div class="num-value" style="color:var(--green);">25–31 mo</div>
+        <div class="num-sub">same hardware, same earn</div>
+      </div>
+      <div class="num-item">
+        <div class="num-label">Residual value</div>
+        <div class="num-value" style="color:var(--green);">$40–80</div>
+        <div class="num-sub">resale after breakeven</div>
+      </div>
+    </div>
+
+    <div class="crdt-model" style="border-color:rgba(0,229,255,0.15); margin-top:16px;">
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Structure</span>
+        <span class="crdt-val">Hardware purchased for a legitimate business activity is a depreciable asset. Section 179 allows immediate expensing in year one (US). The effective hardware cost drops by your marginal tax rate. Electricity is an operating expense. Token earnings are income at time of receipt.</span>
+      </div>
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Implication</span>
+        <span class="crdt-val">Hobbyists running DePIN nodes lose money. Operators who incorporate, track cost basis, and apply the tax code correctly change the breakeven math enough that configurations which appear unprofitable on the surface may be positive on an after-tax basis. The difference is paperwork, not hardware.</span>
+      </div>
+    </div>
+
+    <!-- VECTOR 5: TOKEN FLOAT -->
+    <div class="shadow-header" style="color:var(--cyan); margin:32px 0 14px; display:flex; align-items:center; gap:8px; font-size:10px; letter-spacing:0.2em; text-transform:uppercase;">
+      <span>▸</span> Vector 5: Unstaked Token Float in Burn-and-Mint Networks
+    </div>
+
+    <div class="crdt-model" style="border-color:rgba(0,229,255,0.15);">
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Mechanism</span>
+        <span class="crdt-val">In burn-and-mint equilibrium networks, enterprise users burn tokens to purchase service credits. Miners who stake and hold own a growing share of a shrinking float. This is not mining income—it is a position in a scarce asset that happens to also pay yield. The two streams compound.</span>
+      </div>
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Signal</span>
+        <span class="crdt-val">Watch the burn rate, not the token price. When <code>daily_burns ÷ daily_emissions</code> approaches 1.0, the token is approaching supply equilibrium. When burns exceed emissions, the token supply is contracting while existing staked positions represent a larger share of a smaller total. This is the second revenue stream most node operators never capture because they sell immediately.</span>
+      </div>
+      <div class="crdt-row">
+        <span class="crdt-key" style="color:#00aacc;">The Threshold</span>
+        <span class="crdt-val">The burn/emission ratio is publicly readable from chain state on any Solana or EVM DePIN. The profitable configuration is: enter early (Vector 1), place correctly (Vector 2), only in Type B protocols (Vector 3), stake and hold rather than dump, and watch the ratio. Exit when either the protocol stalls or you need liquidity—not on a fixed schedule.</span>
+      </div>
+    </div>
+
+    <!-- THE ALPHA ENGINE -->
+    <div class="shadow-header" style="color:var(--green-dim); margin:32px 0 14px; display:flex; align-items:center; gap:8px; font-size:10px; letter-spacing:0.2em; text-transform:uppercase;">
+      <span style="color:var(--green-dim);">◆</span> What rainbowd Is Missing: The Alpha Engine
+    </div>
+
+    <p style="font-size:12px; color:#9ab89a; margin-bottom:14px;">The Thompson Sampling scheduler already designed for this system selects protocols by trailing profitability. That is reactive. The five vectors above are predictive. The missing module—no one has shipped it as an open tool—combines them:</p>
+
+    <div class="why-block">
+      <div class="why-item"><span class="why-dot" style="color:var(--cyan);">1</span><span><strong style="color:#ddeedd;">Crossover Calculator:</strong> For each supported protocol, fetch the emission schedule from the whitepaper and the live node count from the explorer API. Compute T* (the date emission decay rate exceeds node growth rate). Surface "before crossover / at crossover / saturated" per protocol. This is the entry signal.</span></div>
+      <div class="why-item"><span class="why-dot" style="color:var(--cyan);">2</span><span><strong style="color:#ddeedd;">Hex Density Scanner:</strong> For coverage-based protocols (Helium Mobile, DIMO, Hivemapper), query the coverage map API for the node's current H3 hex density and reward scale. Surface the nearest sparse hex and the optimal ring placement coordinates. This is the placement signal.</span></div>
+      <div class="why-item"><span class="why-dot" style="color:var(--cyan);">3</span><span><strong style="color:#ddeedd;">Burn/Emission Monitor:</strong> For each protocol, compute the rolling 7-day burn/emission ratio from on-chain data. Protocols with ratio trending toward 1.0 receive increased weight in the Thompson sampler regardless of current token price. This is the hold signal.</span></div>
+      <div class="why-item"><span class="why-dot" style="color:var(--cyan);">4</span><span><strong style="color:#ddeedd;">Protocol Type Classifier:</strong> Automatically flag protocols as Type A (token-circular) or Type B (usage-backed) based on external revenue sources found in on-chain fee data. Refuse to schedule Type A protocols when emissions are within 6 months of a halving event. This is the filter.</span></div>
+    </div>
+
+    <p style="font-size:12px; color:var(--text-dim); margin-top:16px; margin-bottom:28px;">These four queries, running continuously and feeding the Thompson sampler's reward estimates, turn the mining scheduler from a reactive load balancer into a structural edge. The data is all public. The math is not complex. Nobody has assembled it into a single decision layer because the people who figured it out are running it quietly, and the people who write about DePIN are selling something else.</p>
+
+    <!-- PROJECT OPTIONS -->
+    <div class="shadow-header" style="color:var(--green-dim); margin:28px 0 14px; display:flex; align-items:center; gap:8px; font-size:10px; letter-spacing:0.2em; text-transform:uppercase;">
+      <span style="color:var(--green-dim);">◆</span> Economic Model Options for This Project
+    </div>
+
+    <div class="econ-options">
+      <div class="econ-card">
+        <div class="econ-option-label">Option A</div>
+        <div class="econ-option-title">Freemium Ad-Blocking</div>
+        <div class="econ-option-body">Core ad-blocking is free. Premium features (custom HTML replacement, advanced analytics, VPN tunneling) are $5/month.</div>
+        <div class="econ-tags">
+          <span class="tag tag-pro">Recurring revenue</span>
+          <span class="tag tag-pro">No crypto dependency</span>
+          <span class="tag tag-con">Requires payment infra</span>
+          <span class="tag tag-con">User accounts</span>
+        </div>
+      </div>
+
+      <div class="econ-card recommended">
+        <div class="econ-option-label">Option B</div>
+        <div class="econ-option-title">Honest Mining + Alpha Engine</div>
+        <div class="econ-option-body">Ad-blocking is the primary value prop. Mining is opt-in, with the five-vector analysis running continuously. No earnings promises—just structural transparency about what the math actually says.</div>
+        <div class="econ-tags">
+          <span class="tag tag-pro">Honest positioning</span>
+          <span class="tag tag-pro">Builds trust</span>
+          <span class="tag tag-pro">Actual edge</span>
+          <span class="tag tag-con">No guaranteed revenue</span>
+        </div>
+      </div>
+
+      <div class="econ-card">
+        <div class="econ-option-label">Option C</div>
+        <div class="econ-option-title">Sell the Hardware</div>
+        <div class="econ-option-body">Pre-flashed Raspberry Pi or mini-PC with bootyloversdelight pre-installed. Margin on hardware sales funds development.</div>
+        <div class="econ-tags">
+          <span class="tag tag-pro">One-time revenue</span>
+          <span class="tag tag-con">Inventory & shipping</span>
+          <span class="tag tag-con">Support overhead</span>
+        </div>
+      </div>
+    </div>
+
+    <p style="font-size:12px; color:var(--text-dim);">The honest positioning is not "this will make you rich" and not "this will not make you money." It is: <strong style="color:var(--text);">the default configuration is negative. The informed configuration is structurally different. Here is the math. You decide.</strong> That differentiates this project from both the grift and the pessimism.</p>
+  </section>
+
+  <!-- ─── SECTION 6: SECURITY TRADE-OFFS ───────────────────── -->
+  <section id="s6">
+    <div class="section-header">
+      <span class="section-num">06 ·</span>
+      <h2>Security Trade-Offs: TOFU vs. Central CA</h2>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Pros</th>
+            <th>Cons</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-label">Central CA</td>
+            <td class="td-green">Strong initial trust (certs chain to single offline root); easy rotation; centralized revocation (CRL/OCSP).</td>
+            <td class="td-red">Single point of failure and compromise. If the CA private key is stolen, the attacker can impersonate any node. If CA is offline, new nodes cannot join and existing nodes cannot renew certs. The CA is the spine we were trying to avoid.</td>
+          </tr>
+          <tr>
+            <td class="td-label">TOFU + SPKI Pinning</td>
+            <td class="td-green">No single point of failure. Each node's trust is anchored to its own initial bootstrap interaction. Compromising one node does not compromise the mesh. Works offline. Scales infinitely.</td>
+            <td class="td-red">First-contact vulnerability if the bootstrap pin is not verified out-of-band. No central revocation. Certificate changes require manual user acceptance.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:16px; font-size:12px; color:var(--text-dim);">The <strong style="color:var(--text);">bootyloversdelight choice: TOFU + SPKI Pinning.</strong> The threat model is residential networks, not nation-state adversaries. The risk of a MITM during the first 60-second QR code window is acceptable given the physical presence requirement. The resilience benefit of eliminating the CA single point of failure outweighs the theoretical first-contact vulnerability.</p>
+  </section>
+
+  <!-- ─── SECTION 7: VULNERABILITY TABLE ───────────────────── -->
+  <section id="s7">
+    <div class="section-header">
+      <span class="section-num">07 ·</span>
+      <h2>Vulnerability Acknowledgments & Mitigations</h2>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Component</th>
+            <th>Known Vulnerability</th>
+            <th>Mitigation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="vuln-component">tonic (gRPC)</td>
+            <td><span class="vuln-cve">CVE-2024-47609</span><br><span style="color:#8a9a8a; font-size:11px;">Remote DoS via malicious payloads</span></td>
+            <td style="color:#9ab89a; font-size:12px;">Pin to <code>tonic = "0.12.3"</code>, which includes the fix.</td>
+          </tr>
+          <tr>
+            <td class="vuln-component">automerge (CRDT)</td>
+            <td style="color:#8a9a8a; font-size:12px;">Document bloat leading to sync slowdown</td>
+            <td style="color:#9ab89a; font-size:12px;">Implement tombstone garbage collection after 30-day consensus.</td>
+          </tr>
+          <tr>
+            <td class="vuln-component">mDNS</td>
+            <td style="color:#8a9a8a; font-size:12px;">Multicast disabled on many corporate/cloud networks</td>
+            <td style="color:#9ab89a; font-size:12px;">Fallback to manual IP entry and QR code scanning; mDNS is for convenience, not necessity.</td>
+          </tr>
+          <tr>
+            <td class="vuln-component">Self-signed certs</td>
+            <td style="color:#8a9a8a; font-size:12px;">Browsers show scary warnings</td>
+            <td style="color:#9ab89a; font-size:12px;">Provide clear instructions for installing the node's certificate, or use plain HTTP for LAN-only dashboards with a warning.</td>
+          </tr>
+          <tr>
+            <td class="vuln-component">Gossip protocol</td>
+            <td style="color:#8a9a8a; font-size:12px;">Eclipse attacks (malicious node floods peer's view with attacker-controlled nodes)</td>
+            <td style="color:#9ab89a; font-size:12px;">Limit the number of peers gossiped per round; require manual approval for the first bootstrap connection.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─── 3AM BLOCK ──────────────────────────────────────────── -->
+  <div class="three-am">
+    <div class="three-am-label">The 3 AM Sysadmin Summary</div>
+    <p>Every box runs the exact same binary. You unbox a new node, plug it in, and it shows a QR code on its little screen. You point your phone at it, scan, and the new node joins the mesh automatically. All your ad-block rules sync across every node without you touching a database. If one node catches fire, the dashboard on your phone just talks to the next closest node and you don't even notice. No cloud, no master server, no "please contact your administrator" errors. It's a swarm of identical bees. You can unplug half of them and the hive keeps making honey. Now go get some sleep—the network's got this.</p>
+  </div>
+
+  <!-- ─── FOOTER ─────────────────────────────────────────────── -->
+  <footer>
+    <span class="footer-left">bootyloversdelight · mesh infrastructure · rev 0.2</span>
+    <span class="footer-right">TOFU + SPKI · automerge CRDT · gRPC gossip</span>
+  </footer>
+
+</div>
+</body>
+</html>
